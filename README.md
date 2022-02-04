@@ -1,4 +1,4 @@
-#### Lyndon Enumeration
+## Lyndon Enumeration
 
 The following code allows to:
 * Simulate words by using: **python simator.py sigma length**.
