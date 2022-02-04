@@ -6,7 +6,7 @@ The following code allows to:
     *   ./lyndon.out
 
 Dependencies:
-* sdsl
+* sdsl-lite: *https://github.com/simongog/sdsl-lite*
 
 Execution:
 * make clean && make
