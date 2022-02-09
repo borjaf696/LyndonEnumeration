@@ -7,7 +7,45 @@
 #include <fstream>
 #include <string>
 #include <unordered_set>
+#include <set>
 #include <unordered_map>
+#include <map>
+#include <vector>
+#include <dirent.h>
+#include <sstream>
+#include <chrono>
+
+#define outputdir "output/"
+
+std::vector<std::string> get_all_files_dir(std::string path)
+{
+    std::vector<std::string> files;
+    DIR *dir; struct dirent *diread;
+    if ((dir = opendir(path.c_str())) != nullptr) {
+        while ((diread = readdir(dir)) != nullptr) {
+            files.push_back(std::string(path)+"/"+std::string(diread->d_name));
+        }
+        closedir (dir);
+    } 
+    return files;
+}
+
+std::pair<int, int> get_sigma_length(std::string file)
+{
+    std::string segment;
+    int i = 0, sigma = 0, length = 0;
+    std::stringstream ss_file(file);
+    while(std::getline(ss_file, segment, '_'))
+    {
+        if (i == 1){
+            sigma = stoi(segment);
+        }
+        if (i == 2)
+            length = stoi(segment.substr(0,2));
+        i++;
+    }
+    return {sigma, length};
+}
 
 std::unordered_set<char> get_seq_chars()
 {
@@ -29,7 +67,7 @@ int num_remaining_chars(sdsl::wt_huff<sdsl::rrr_vector<63>> wt, char character, 
     return wt.rank(full_length, character) - wt.rank(position, character);
 }
 
-std::unordered_map<char, int> get_remaining_chars(sdsl::wt_huff<sdsl::rrr_vector<63>> wt, int position, std::unordered_set<char> char_set)
+std::map<char, int> get_remaining_chars(sdsl::wt_huff<sdsl::rrr_vector<63>> wt, int position, std::unordered_set<char> char_set)
 {
     std::unordered_map<char, int> return_map;
     int full_length = wt.size();
@@ -38,7 +76,8 @@ std::unordered_map<char, int> get_remaining_chars(sdsl::wt_huff<sdsl::rrr_vector
         if (r > 0)
             return_map[c] = wt.select(rank_c + 1, c);
     }
-    return return_map;
+    std::map<char, int> return_ordered_map(return_map.begin(), return_map.end());
+    return return_ordered_map;
 }
 
 
