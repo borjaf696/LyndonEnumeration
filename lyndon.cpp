@@ -3,9 +3,9 @@
 using namespace sdsl;
 using namespace std;
 
+bool quiet = false;
 // Lyndon enumeration
-void enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates
-    ,vector<vector<pair<int, float>>> & times)
+int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates)
 {
     std::unordered_set<char> seq_chars = get_seq_chars();
     /*
@@ -36,14 +36,13 @@ void enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<v
     };
     vector<string> lyndon_words;
     int visited_trie_nodes = 0;
-    auto start = std::chrono::system_clock::now();
     _enumeration(0, 0, "", lyndon_words, visited_trie_nodes);
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<float,std::milli> duration = end - start;
-    int number = 0;
+    if (quiet)
+        return lyndon_words.size();
     /*
      * Report
      */ 
+    int number = 0;
     ofstream lyndon_report;
     string output_name = "output/sim_"+to_string(sig_l.first)+"_"+to_string(sig_l.second)+".txt";
     lyndon_report.open(output_name.c_str());
@@ -51,8 +50,8 @@ void enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<v
         lyndon_report << lyndon<<endl;
         number++;
     }
-    times[sig_l.first].push_back({sig_l.second, (duration.count()/number)});
     rates[sig_l.first].push_back({sig_l.second, visited_trie_nodes/(number*1.)});
+    return number;
 }
 
 int main(int argc, char *argv[])
@@ -75,7 +74,11 @@ int main(int argc, char *argv[])
         idx.insert(sig_l.first);
         wt_huff<rrr_vector<63>> wt;
         construct(wt,file, 1);
-        enumeration(wt, sig_l, rates, times);
+        auto start = std::chrono::system_clock::now();
+        int number = enumeration(wt, sig_l, rates);
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<float,std::milli> duration = end - start;
+        times[sig_l.first].push_back({sig_l.second, (duration.count()/number)});
     }
     // Print rates
     for (auto i:idx)
