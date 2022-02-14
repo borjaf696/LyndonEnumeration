@@ -5,9 +5,8 @@ using namespace std;
 
 bool quiet = false;
 // Lyndon enumeration
-int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates)
+int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates,const std::unordered_set<char> & seq_chars)
 {
-    std::unordered_set<char> seq_chars = get_seq_chars();
     /*
      * Operate as in 
      */ 
@@ -16,6 +15,7 @@ int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<ve
     {
         char ref_char = seq[matched_position];
         // For each available char we need to know its placement
+        //cout << "Wt size: "<<wt.size()<<" Pos: "<<position<<" "<<<<endl;
         map<char,int> remaining_chars = get_remaining_chars(wt,position, seq_chars);
         /*for (auto k_v:remaining_chars)
             cout << "Key: "<<k_v.first<<" "<<k_v.second<<endl;*/
@@ -51,7 +51,7 @@ int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<ve
         number++;
     }
     rates[sig_l.first].push_back({sig_l.second, visited_trie_nodes/(number*1.)});
-    return number;
+    return lyndon_words.size();
 }
 
 int main(int argc, char *argv[])
@@ -74,11 +74,13 @@ int main(int argc, char *argv[])
         idx.insert(sig_l.first);
         wt_huff<rrr_vector<63>> wt;
         construct(wt,file, 1);
+        std::unordered_set<char> seq_chars = get_seq_chars(file);
         auto start = std::chrono::system_clock::now();
-        int number = enumeration(wt, sig_l, rates);
+        int number = enumeration(wt, sig_l, rates, seq_chars);
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<float,std::milli> duration = end - start;
         times[sig_l.first].push_back({sig_l.second, (duration.count()/number)});
+        cout << "Number of lyndon words: "<<number<<endl;
     }
     // Print rates
     for (auto i:idx)

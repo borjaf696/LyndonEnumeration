@@ -14,19 +14,14 @@
 #include <dirent.h>
 #include <sstream>
 #include <chrono>
-
-#define outputdir "output/"
+#include <filesystem>
 
 std::vector<std::string> get_all_files_dir(std::string path)
 {
     std::vector<std::string> files;
-    DIR *dir; struct dirent *diread;
-    if ((dir = opendir(path.c_str())) != nullptr) {
-        while ((diread = readdir(dir)) != nullptr) {
-            files.push_back(std::string(path)+"/"+std::string(diread->d_name));
-        }
-        closedir (dir);
-    } 
+    for (std::filesystem::recursive_directory_iterator i(path), end; i != end; ++i) 
+        if (!std::filesystem::is_directory(i->path()))
+            files.push_back(std::string(i->path()));
     return files;
 }
 
@@ -47,11 +42,11 @@ std::pair<int, int> get_sigma_length(std::string file)
     return {sigma, length};
 }
 
-std::unordered_set<char> get_seq_chars()
+std::unordered_set<char> get_seq_chars(std::string path)
 {
     std::unordered_set<char> solution;
     std::string seq;
-    std::ifstream myfile; myfile.open("example/simulation.txt");
+    std::ifstream myfile; myfile.open(path);
     if (myfile.is_open())
         myfile >> seq;
     for (auto c: seq)

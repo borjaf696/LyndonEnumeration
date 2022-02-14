@@ -1,1 +1,6 @@
 *.txt
+*.o
+*.out
+simulations/*
+output/*
+*.git
