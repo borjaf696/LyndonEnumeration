@@ -8,6 +8,8 @@ def __simulate(sigma, length, num_sim, seed, dir = 'simulations/'):
     sim_dir = dir+str(num_sim)+'/'
     if not os.path.exists(sim_dir):
         os.mkdir(sim_dir)
+    if not os.path.exists('output'):
+        os.mkdir('output')
     list_chars = [t for t in string.ascii_uppercase]
     sigma = sigma if sigma < len(list_chars) else len(list_chars)
     alphabet = np.random.choice(list_chars, size = sigma+1, replace = False)
