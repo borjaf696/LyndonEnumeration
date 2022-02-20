@@ -16,6 +16,8 @@
 #include <chrono>
 #include <filesystem>
 
+#define N_THREADS 20
+
 std::vector<std::string> get_all_files_dir(std::string path)
 {
     std::vector<std::string> files;
@@ -54,6 +56,16 @@ std::unordered_set<char> get_seq_chars(std::string path)
     return solution;
 }
 
+std::unordered_map<char, int> get_num_chars(const sdsl::wt_huff<sdsl::rrr_vector<63>> & wt, const std::unordered_set<char> & seq_chars)
+{
+    std::unordered_map<char, int> results_map;
+    int full_length = wt.size();
+    for (auto c: seq_chars){
+        results_map[c] = wt.rank(full_length, c);
+    }
+    return results_map;
+}
+
 // Support functions
 
 int num_remaining_chars(sdsl::wt_huff<sdsl::rrr_vector<63>> wt, char character, int position)
@@ -62,12 +74,13 @@ int num_remaining_chars(sdsl::wt_huff<sdsl::rrr_vector<63>> wt, char character, 
     return wt.rank(full_length, character) - wt.rank(position, character);
 }
 
-std::map<char, int> get_remaining_chars(sdsl::wt_huff<sdsl::rrr_vector<63>> wt, int position, std::unordered_set<char> char_set)
+std::map<char, int> get_remaining_chars(const sdsl::wt_huff<sdsl::rrr_vector<63>> & wt, int position, 
+    std::unordered_set<char> & char_set, std::unordered_map<char, int> & count_chars)
 {
     std::unordered_map<char, int> return_map;
-    int full_length = wt.size();
     for (auto c:char_set){
-        int rank_c = wt.rank(position, c), r = wt.rank(full_length, c) - wt.rank(position, c);
+        int rank_c = wt.rank(position, c), 
+            r = count_chars[c] - wt.rank(position, c);
         if (r > 0)
             return_map[c] = wt.select(rank_c + 1, c);
     }

@@ -1,22 +1,24 @@
 #include "lyndon.h"
+#include <omp.h>
 
 using namespace sdsl;
 using namespace std;
 
 bool quiet = false;
 // Lyndon enumeration
-int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates,const std::unordered_set<char> & seq_chars)
+int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates,std::unordered_set<char> & seq_chars)
 {
+    unordered_map<char, int> count_chars = get_num_chars(wt, seq_chars);
     /*
      * Operate as in 
      */ 
-    function<void(int,int,string,vector<string>&,int&)> _enumeration = [wt, seq_chars, &_enumeration]
+    function<void(int,int,string,vector<string>&,int&)> _enumeration = [wt, &seq_chars,&count_chars, &_enumeration]
         (int position, int matched_position, string seq, vector<string> & lyndon_words, int & visited_trie_nodes) 
     {
         char ref_char = seq[matched_position];
         // For each available char we need to know its placement
         //cout << "Wt size: "<<wt.size()<<" Pos: "<<position<<" "<<<<endl;
-        map<char,int> remaining_chars = get_remaining_chars(wt,position, seq_chars);
+        map<char,int> remaining_chars = get_remaining_chars(wt,position, seq_chars, count_chars);
         /*for (auto k_v:remaining_chars)
             cout << "Key: "<<k_v.first<<" "<<k_v.second<<endl;*/
         for (auto k_v:remaining_chars)
@@ -59,29 +61,43 @@ int main(int argc, char *argv[])
     cout << "Lyndon words enumeration"<<endl;
     vector<string> files = get_all_files_dir("simulations/");
     sort(files.begin(), files.end());
-    for (auto file: files)
-        cout << file << " "<<endl;
+    /*for (auto file: files)
+        cout << file << " "<<endl;*/
     // Wavelette tree
     vector<vector<pair<int,float>>> rates(files.size(), vector<pair<int,float>>());
     vector<vector<pair<int,float>>> times(files.size(), vector<pair<int,float>>());
     set<int> idx;
-    for (auto file: files)
+    omp_set_num_threads(N_THREADS);
+    cout << "Number of threads working: "<<N_THREADS<<endl;
+    #pragma omp parallel shared(times, rates, files)
     {
-        if (file[file.size() - 1] == '.')
-            continue;
-        cout << "File: "<<file<<endl;
-        pair<int,int> sig_l = get_sigma_length(file);
-        idx.insert(sig_l.first);
-        wt_huff<rrr_vector<63>> wt;
-        construct(wt,file, 1);
-        std::unordered_set<char> seq_chars = get_seq_chars(file);
-        auto start = std::chrono::system_clock::now();
-        int number = enumeration(wt, sig_l, rates, seq_chars);
-        auto end = std::chrono::system_clock::now();
-        std::chrono::duration<float,std::milli> duration = end - start;
-        times[sig_l.first].push_back({sig_l.second, (duration.count()/number)});
-        cout << "Number of lyndon words: "<<number<<endl;
+            for (uint i = 0; i < ceil(files.size() / N_THREADS); ++i)
+            {
+                int th_idx = i*N_THREADS + omp_get_thread_num();
+                string file = files[th_idx];
+                if (file[file.size() - 1] == '.')
+                    continue;
+                int percentage = ceil(((float) th_idx / (float) files.size() * 100));
+                if ((percentage % 10) == 0)
+                    cout << percentage<<"% "<<endl;
+                //cout << "File: "<<file<<" Thread working: "<<id<<" of: "<<np<<endl;
+                pair<int,int> sig_l = get_sigma_length(file);
+                idx.insert(sig_l.first);
+                wt_huff<rrr_vector<63>> wt;
+                construct(wt,file, 1);
+                std::unordered_set<char> seq_chars = get_seq_chars(file);
+                auto start = std::chrono::system_clock::now();
+                int number = enumeration(wt, sig_l, rates, seq_chars);
+                auto end = std::chrono::system_clock::now();
+                std::chrono::duration<float,std::milli> duration = end - start;
+                #pragma omp critical
+                {
+                    times[sig_l.first].push_back({sig_l.second, (duration.count()/number)});
+                }
+                //cout << "Number of lyndon words: "<<number<<endl;
+            }
     }
+    cout << endl;
     // Print rates
     for (auto i:idx)
     {
