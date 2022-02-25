@@ -91,28 +91,28 @@ int stack_enumeration(const vector<map<char,pair<int,int>>> & next_chars, std::u
         // Check if all remaining characters are smaller or equal than the first one.
         for (auto k_val:next_chars[placement])
         {
-            if (k_val.first > cur_IL_word[0])
+            if ((k_val.first > cur_IL_word[0]) & (k_val.second.first > 0))
                 break;
         }
         for (auto k_val:next_chars[placement])
         {
             //cout << "Key: "<<k_val.first<<" "<<k_val.second.first<<endl;
+            if (k_val.first < cur_IL_word[idx_IL_word])
+                continue;
             if (k_val.second.first == 0)
                 continue;
+            string new_L_word = cur_IL_word + k_val.first;
             if (k_val.first == cur_IL_word[idx_IL_word])
             {
-                cur_IL_stack.push(cur_IL_word + k_val.first);
-                placement_SEQ.push(k_val.second.second);
                 placement_IL.push(idx_IL_word + 1);
             }
             if (k_val.first > cur_IL_word[idx_IL_word])
             {   
-                string new_L_word = cur_IL_word + k_val.first;
-                cur_IL_stack.push(new_L_word);
-                placement_SEQ.push(k_val.second.second);
                 placement_IL.push(0);
                 lyndon_words.push_back(new_L_word);
             }
+            cur_IL_stack.push(new_L_word);
+             placement_SEQ.push(k_val.second.second);
         }
     }
     if (DEBUG)
