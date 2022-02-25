@@ -11,12 +11,14 @@
 #include <unordered_map>
 #include <map>
 #include <vector>
+#include <stack>
 #include <dirent.h>
 #include <sstream>
 #include <chrono>
 #include <filesystem>
 
-#define N_THREADS 20
+#define N_THREADS 1
+#define DEBUG false
 
 std::vector<std::string> get_all_files_dir(std::string path)
 {
@@ -88,4 +90,49 @@ std::map<char, int> get_remaining_chars(const sdsl::wt_huff<sdsl::rrr_vector<63>
     return return_ordered_map;
 }
 
-
+// Construct method
+std::vector<std::map<char, std::pair<int,int>>> construct(std::string file)
+{
+    std::string line;
+    std::ifstream chain_file;
+    chain_file.open (file);
+    if (chain_file.is_open())
+    {
+        while ( getline (chain_file,line) )
+        {
+            std::cout << line << std::endl;
+        }
+        chain_file.close();
+    }
+    chain_file.close();
+    std::vector<std::map<char,std::pair<int,int>>> return_vect_map;
+    std::map<char,std::pair<int,int>> local_map;
+    for (int i = line.size() - 1; i >= 0; --i){
+        if (local_map.find(line[i]) == local_map.end())
+            local_map[line[i]] = {0,i};
+        return_vect_map.push_back(std::map<char,std::pair<int,int>>());
+    }
+    for (int i = line.size() - 1; i >= 0; --i)
+    {
+        //std::cout << "Index: "<<i<<std::endl;
+        local_map[line[i]].first++;
+        for (auto k_v: local_map){
+            //std::cout <<"Key: "<<k_v.first<<"Indice: "<< i<<" "<< local_map[k_v.first].second<<" " << local_map[k_v.first].first<<" "<<local_map[k_v.first].second<< std::endl;
+            if (line[i] == k_v.first)
+                return_vect_map[i][k_v.first] = {local_map[k_v.first].first, i + 1};
+            else
+                return_vect_map[i][k_v.first] = {local_map[k_v.first].first, local_map[k_v.first].second + 1};//return_vect_map[local_map[k_v.first].second][k_v.first].second};
+            //std::cout << k_v.first<<" "<<(return_vect_map[i][k_v.first]).first<<" "<<(return_vect_map[i][k_v.first]).second<<std::endl;
+        }
+        local_map[line[i]].second = i;
+    }
+    if (DEBUG){
+        for (size_t i = 0; i  < return_vect_map.size(); ++i)
+        {
+            std::cout << "Index: "<<i<<std::endl;
+            for (auto k_v: return_vect_map[i])
+                std::cout << k_v.first<<" "<<k_v.second.first<<" "<<k_v.second.second<<std::endl;
+        }
+    }
+    return return_vect_map;
+}

@@ -25,6 +25,8 @@ int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<ve
         {
             char c = k_v.first;
             int placement = k_v.second;
+            if ((remaining_chars.size() == 1) & (c == ref_char) & (seq.size() > 0))
+                return;
             string n_seq = seq + c;
             if (c == ref_char)
                 _enumeration(placement + 1, matched_position + 1, n_seq, lyndon_words, visited_trie_nodes);
@@ -53,14 +55,82 @@ int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<ve
         number++;
     }
     rates[sig_l.first].push_back({sig_l.second, visited_trie_nodes/(number*1.)});
+    if (DEBUG)
+    {
+        for (auto i: lyndon_words)
+            cout << "Lyndon: "<<i<<endl;
+    }
+    return lyndon_words.size();
+}
+
+// Stack enumeration
+int stack_enumeration(const vector<map<char,pair<int,int>>> & next_chars, std::unordered_set<char> & seq_chars)
+{
+    vector<string> lyndon_words;
+    for (auto key: seq_chars)
+        lyndon_words.push_back(string(1,key));
+    stack<string> cur_IL_stack;
+    stack<int> placement_SEQ, placement_IL;
+    for (auto k_val:next_chars[0])
+    {
+        cur_IL_stack.push(string(1,k_val.first));
+        placement_SEQ.push(k_val.second.second);
+        placement_IL.push(0);
+    }
+    while (!(cur_IL_stack.empty()))
+    {
+        string cur_IL_word = cur_IL_stack.top();
+        int placement = placement_SEQ.top();
+        int idx_IL_word = placement_IL.top();
+        //cout << "Word: "<<cur_IL_word<<" placement: "<<placement<<" idx: "<<idx_IL_word<<endl;
+        cur_IL_stack.pop();
+        placement_SEQ.pop();
+        placement_IL.pop();
+        if (placement >= (int) next_chars.size())
+            continue;
+        // Check if all remaining characters are smaller or equal than the first one.
+        for (auto k_val:next_chars[placement])
+        {
+            if (k_val.first > cur_IL_word[0])
+                break;
+        }
+        for (auto k_val:next_chars[placement])
+        {
+            //cout << "Key: "<<k_val.first<<" "<<k_val.second.first<<endl;
+            if (k_val.second.first == 0)
+                continue;
+            if (k_val.first == cur_IL_word[idx_IL_word])
+            {
+                cur_IL_stack.push(cur_IL_word + k_val.first);
+                placement_SEQ.push(k_val.second.second);
+                placement_IL.push(idx_IL_word + 1);
+            }
+            if (k_val.first > cur_IL_word[idx_IL_word])
+            {   
+                string new_L_word = cur_IL_word + k_val.first;
+                cur_IL_stack.push(new_L_word);
+                placement_SEQ.push(k_val.second.second);
+                placement_IL.push(0);
+                lyndon_words.push_back(new_L_word);
+            }
+        }
+    }
+    if (DEBUG)
+    {
+        for (auto i: lyndon_words)
+            cout << "Lyndon: "<<i<<endl;
+    }
     return lyndon_words.size();
 }
 
 int main(int argc, char *argv[])
 {
     cout << "Lyndon words enumeration"<<endl;
-    vector<string> files = get_all_files_dir("simulations/");
+    //vector<string> files = get_all_files_dir("simulations/");
+    vector<string> files = get_all_files_dir("example/");
     sort(files.begin(), files.end());
+    int method = atoi(argv[1]);
+    cout << "Method: "<<method<<endl;
     /*for (auto file: files)
         cout << file << " "<<endl;*/
     // Wavelette tree
@@ -78,23 +148,41 @@ int main(int argc, char *argv[])
                 if (file[file.size() - 1] == '.')
                     continue;
                 int percentage = ceil(((float) th_idx / (float) files.size() * 100));
-                if ((percentage % 10) == 0)
-                    cout << percentage<<"% "<<endl;
+                if (omp_get_thread_num() == 0)
+                    if ((percentage % 10) == 0)
+                        cout << percentage<<"% "<<endl;
                 //cout << "File: "<<file<<" Thread working: "<<id<<" of: "<<np<<endl;
                 pair<int,int> sig_l = get_sigma_length(file);
                 idx.insert(sig_l.first);
-                wt_huff<rrr_vector<63>> wt;
-                construct(wt,file, 1);
+                int number = 0;
                 std::unordered_set<char> seq_chars = get_seq_chars(file);
-                auto start = std::chrono::system_clock::now();
-                int number = enumeration(wt, sig_l, rates, seq_chars);
-                auto end = std::chrono::system_clock::now();
-                std::chrono::duration<float,std::milli> duration = end - start;
-                #pragma omp critical
+                // Wavelette tree version
+                if (method == 1){
+                    wt_huff<rrr_vector<63>> wt;
+                    construct(wt,file, 1);
+                    auto start = std::chrono::system_clock::now();
+                    number = enumeration(wt, sig_l, rates, seq_chars);
+                    auto end = std::chrono::system_clock::now();
+                    std::chrono::duration<float,std::milli> duration = end - start;
+                    #pragma omp critical
+                    {
+                        times[sig_l.first].push_back({sig_l.second, (duration.count()/number)});
+                    }
+                } else if (method == 2)
                 {
-                    times[sig_l.first].push_back({sig_l.second, (duration.count()/number)});
+                    cout << "Method: "<<method<<endl;
+                    vector<map<char, pair<int,int>>> forward_count = construct(file);
+                    auto start = std::chrono::system_clock::now();
+                    number = stack_enumeration(forward_count, seq_chars);
+                    auto end = std::chrono::system_clock::now();
+                    std::chrono::duration<float,std::milli> duration = end - start;
+                    #pragma omp critical
+                    {
+                        times[sig_l.first].push_back({sig_l.second, (duration.count()/number)});
+                    }
                 }
-                //cout << "Number of lyndon words: "<<number<<endl;
+                cout << "Number of lyndon words: "<<number<<endl;
+                exit(1);
             }
     }
     cout << endl;

@@ -24,11 +24,11 @@ def __simulate(sigma, length, num_sim, seed, dir = 'simulations/', local_sims = 
     
 if __name__ == '__main__':
     print('python simulator.py sigma len')
-    nsims, local_sims = 30, 1000
+    nsims, local_sims = 30, 100
     sigma, length, seed = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
     min_sigma, min_length = 2, 10
     for i in range(nsims):
-        list_sigma,list_length = list(range(min_sigma,sigma)), list(range(min_length, length,min_length))
+        list_sigma,list_length = list(range(min_sigma,sigma)), list(range(min_length, length,int(min_length/2)))
         for (sig, l) in itertools.product(list_sigma, list_length):
             if sig <= LOW_RANGE_SIGMA and l <= LOW_RANGE_LENGTH:
                 __simulate(sig,l,i, seed, local_sims = local_sims)
