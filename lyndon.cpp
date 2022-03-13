@@ -6,7 +6,7 @@ using namespace std;
 
 bool quiet = false;
 // Lyndon enumeration
-int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates,std::unordered_set<char> & seq_chars)
+int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates,std::set<char> & seq_chars)
 {
     unordered_map<char, int> count_chars = get_num_chars(wt, seq_chars);
     /*
@@ -64,7 +64,7 @@ int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<ve
 }
 
 // Stack enumeration
-int stack_enumeration(const vector<map<char,pair<int,int>>> & next_chars, std::unordered_set<char> & seq_chars)
+int stack_enumeration(const vector<map<char,pair<int,int>>> & next_chars, std::set<char> & seq_chars)
 {
     vector<string> lyndon_words;
     for (auto key: seq_chars)
@@ -123,6 +123,123 @@ int stack_enumeration(const vector<map<char,pair<int,int>>> & next_chars, std::u
     return lyndon_words.size();
 }
 
+
+// DFS enumeration
+vector<string> dfs_enumeration(const vector<vector<int>> & next_chars, std::set<char> & seq_chars, string seq)
+{
+    int seq_size = int(seq.size()), sigma_size = seq_chars.size();
+    int lyndon_w = 0;
+    vector<string> lyndon_words;
+    for (auto key: seq_chars){
+        lyndon_w++;
+        lyndon_words.push_back(string(1,key));
+    }
+    map<char,int> char_map;
+    int place = 0;
+    for (auto c:seq_chars)
+        char_map[c] = place++;
+    for (size_t i = 0; i < next_chars.size() - 2; ++i)
+    {
+        cout << endl;
+        cout << "Place in sequence: "<<i<<endl;
+        cout << endl;
+        stack<int> cur_IL_stack, cur_num_char;
+        vector<int>  curr_traversal(5,-1);
+        int idx_trav = 0;
+        cur_IL_stack.push(0);
+        curr_traversal[idx_trav] = i;
+        cur_num_char.push(0);
+        while (true)
+        {
+            print_stack(curr_traversal, idx_trav);
+            int idx_IL = cur_IL_stack.top();
+            int idx_seq = curr_traversal[idx_trav] + 1;
+            int cur_char = cur_num_char.top(); 
+            int pointed_char = char_map[seq[curr_traversal[idx_IL]]];
+            // Plot:
+            cout << "Cur idx: "<<idx_trav<<" Cur char: "<<cur_char<<" Pointed char: "<<pointed_char<<" idx_IL: "<<idx_IL<<endl;
+            if ((idx_trav == 0) && (cur_char+pointed_char >= sigma_size))
+                break;
+            if ((pointed_char + cur_char) < sigma_size){
+                int next_idx = next_chars[idx_seq][pointed_char + cur_char++] - 1;
+                cout << "Next chars " <<endl;
+                print_stack(next_chars[idx_seq], idx_trav);
+                cout <<"Char comparing to: "<<char_map[seq[curr_traversal[pointed_char]]]<<" cur_char "<<cur_char<<endl;
+                cout <<"Next idx: "<<next_idx<<endl;
+                while ((next_idx >= seq_size) & ((pointed_char + cur_char) < sigma_size)){
+                    next_idx = next_chars[idx_seq][pointed_char + cur_char++] - 1;
+                    cout <<"Next idx: "<<next_idx<<" "<<cur_char<<endl;
+                }
+                if (next_idx < seq_size)
+                {
+                    idx_trav++;
+                    curr_traversal[idx_trav] = next_idx;
+                    if (cur_char == 1){
+                        cur_IL_stack.push(idx_IL + 1);
+                    } else{
+                        cout << "Inserto: "<<endl;
+                        print_stack(curr_traversal, idx_trav);
+                        cur_IL_stack.push(char_map[seq[i]]);
+                        lyndon_w++;
+                        string cur_word = "";
+                        for (int i = 0; i <= idx_trav; i++)
+                            cur_word += seq[curr_traversal[i]];
+                        lyndon_words.push_back(cur_word);
+                    }
+                    cur_num_char.pop();
+                    // Next time I pass through here I follow by cur_char
+                    cur_num_char.push(cur_char);
+                    // In the next iteration I just have to assay the first option: offset = 0
+                    cur_num_char.push(0);
+                } else {
+                    cout << "Backtrackeando"<<endl;
+                    cout << "Cur trav: "<<endl;
+                    print_stack(curr_traversal, idx_trav);
+                    cout << "Stack IL size: "<<cur_IL_stack.size()<<endl;
+                    cout << "cur_num_char size: "<<cur_num_char.size()<<endl;
+                    cout << "Next idx: "<<next_idx<<endl;
+                    cout << "Idx trav: "<<idx_trav<<endl;
+                    // Backtrack
+                    while ((next_idx >= seq_size) && (idx_trav > 0))
+                    {
+                        cur_IL_stack.pop();
+                        cur_num_char.pop();
+                        idx_trav--;
+                        idx_IL = cur_IL_stack.top();
+                        idx_seq = curr_traversal[idx_trav] + 1;
+                        cur_char = cur_num_char.top(); 
+                        pointed_char = char_map[seq[curr_traversal[idx_IL]]];
+                        cout << "Idx trav: "<<idx_trav<<endl;
+                        cout<<"Pointed char: "<<pointed_char<<" curchar: "<<cur_char<<endl;
+                        while ((next_idx >= seq_size) & ((pointed_char + cur_char) < sigma_size)){
+                            next_idx = next_chars[idx_seq][pointed_char + cur_char++] - 1;
+                            cout <<"Next idx: "<<next_idx<<" "<<endl;
+                        }
+                        cout << "Final next idx: "<<next_idx<<endl;
+                    }
+                    if (next_idx < seq_size)
+                    {
+                        idx_trav++;
+                        curr_traversal[idx_trav] = next_idx;
+                        if (cur_char == 1)
+                            cur_IL_stack.push(idx_IL+1);
+                        else{
+                            cur_IL_stack.push(char_map[seq[i]]);
+                            lyndon_w++;
+                        }
+                        cur_num_char.pop();
+                        cur_num_char.push(cur_char);
+                        cur_num_char.push(0);
+                    }
+                    cout <<"Idx trav: "<<idx_trav<<" next idx: "<<next_idx<<" cur num char "<<cur_char<<endl;
+                    print_stack(curr_traversal, idx_trav);
+                }
+            }
+        }
+    }
+    return lyndon_words;
+}
+
 int main(int argc, char *argv[])
 {
     cout << "Lyndon words enumeration"<<endl;
@@ -155,7 +272,9 @@ int main(int argc, char *argv[])
                 pair<int,int> sig_l = get_sigma_length(file);
                 idx.insert(sig_l.first);
                 int number = 0;
-                std::unordered_set<char> seq_chars = get_seq_chars(file);
+                string seq = get_seq(file);
+                cout << "Sequence: "<<seq<<endl;
+                std::set<char> seq_chars = get_seq_chars(file);
                 // Wavelette tree version
                 if (method == 1){
                     wt_huff<rrr_vector<63>> wt;
@@ -171,15 +290,19 @@ int main(int argc, char *argv[])
                 } else if (method == 2)
                 {
                     cout << "Method: "<<method<<endl;
-                    vector<map<char, pair<int,int>>> forward_count = construct(file);
+                    //vector<map<char, pair<int,int>>> forward_count = construct(file);
+                    vector<vector<int>> forward_count = construct(file);
                     auto start = std::chrono::system_clock::now();
-                    number = stack_enumeration(forward_count, seq_chars);
+                    //number = stack_enumeration(forward_count, seq_chars);
+                    vector<string> lyndon_words = dfs_enumeration(forward_count, seq_chars, seq);
                     auto end = std::chrono::system_clock::now();
                     std::chrono::duration<float,std::milli> duration = end - start;
                     #pragma omp critical
                     {
                         times[sig_l.first].push_back({sig_l.second, (duration.count()/number)});
                     }
+                    print_lyndon(lyndon_words);
+                    number = lyndon_words.size();
                 }
                 cout << "Number of lyndon words: "<<number<<endl;
                 exit(1);

@@ -18,7 +18,9 @@
 #include <filesystem>
 
 #define N_THREADS 1
-#define DEBUG false
+#define DEBUG true
+
+using namespace std;
 
 std::vector<std::string> get_all_files_dir(std::string path)
 {
@@ -46,9 +48,9 @@ std::pair<int, int> get_sigma_length(std::string file)
     return {sigma, length};
 }
 
-std::unordered_set<char> get_seq_chars(std::string path)
+std::set<char> get_seq_chars(std::string path)
 {
-    std::unordered_set<char> solution;
+    std::set<char> solution;
     std::string seq;
     std::ifstream myfile; myfile.open(path);
     if (myfile.is_open())
@@ -58,7 +60,18 @@ std::unordered_set<char> get_seq_chars(std::string path)
     return solution;
 }
 
-std::unordered_map<char, int> get_num_chars(const sdsl::wt_huff<sdsl::rrr_vector<63>> & wt, const std::unordered_set<char> & seq_chars)
+string get_seq(std::string path)
+{
+    std::set<char> solution;
+    std::string seq;
+    std::ifstream myfile; myfile.open(path);
+    if (myfile.is_open())
+        myfile >> seq;
+    myfile.close();
+    return seq;
+}
+
+std::unordered_map<char, int> get_num_chars(const sdsl::wt_huff<sdsl::rrr_vector<63>> & wt, const std::set<char> & seq_chars)
 {
     std::unordered_map<char, int> results_map;
     int full_length = wt.size();
@@ -77,7 +90,7 @@ int num_remaining_chars(sdsl::wt_huff<sdsl::rrr_vector<63>> wt, char character, 
 }
 
 std::map<char, int> get_remaining_chars(const sdsl::wt_huff<sdsl::rrr_vector<63>> & wt, int position, 
-    std::unordered_set<char> & char_set, std::unordered_map<char, int> & count_chars)
+    std::set<char> & char_set, std::unordered_map<char, int> & count_chars)
 {
     std::unordered_map<char, int> return_map;
     for (auto c:char_set){
@@ -91,7 +104,8 @@ std::map<char, int> get_remaining_chars(const sdsl::wt_huff<sdsl::rrr_vector<63>
 }
 
 // Construct method
-std::vector<std::map<char, std::pair<int,int>>> construct(std::string file)
+//std::vector<std::map<char, std::pair<int,int>>> construct(std::string file)
+vector<vector<int>> construct(string file)
 {
     std::string line;
     std::ifstream chain_file;
@@ -105,20 +119,22 @@ std::vector<std::map<char, std::pair<int,int>>> construct(std::string file)
         chain_file.close();
     }
     chain_file.close();
+    std::vector<std::vector<int>> return_vect_int;
     std::vector<std::map<char,std::pair<int,int>>> return_vect_map;
     std::map<char,std::pair<int,int>> local_map;
     for (int i = line.size() - 1; i >= 0; --i){
         if (local_map.find(line[i]) == local_map.end())
-            local_map[line[i]] = {0,i};
+            local_map[line[i]] = {0,line.size()};
         return_vect_map.push_back(std::map<char,std::pair<int,int>>());
+        return_vect_int.push_back(vector<int>());
     }
     for (int i = line.size() - 1; i >= 0; --i)
     {
-        //std::cout << "Index: "<<i<<std::endl;
+        // std::cout << "Index: "<<i<<std::endl;
         local_map[line[i]].first++;
         for (auto k_v: local_map){
-            //std::cout <<"Key: "<<k_v.first<<"Indice: "<< i<<" "<< local_map[k_v.first].second<<" " << local_map[k_v.first].first<<" "<<local_map[k_v.first].second<< std::endl;
-            if (line[i] == k_v.first)
+            // std::cout <<"Key: "<<k_v.first<<"Indice: "<< i<<" "<< local_map[k_v.first].second<<" " << local_map[k_v.first].first<<" "<<local_map[k_v.first].second<< std::endl;
+            if ((line[i] == k_v.first) & (i > 0))
                 return_vect_map[i][k_v.first] = {local_map[k_v.first].first, i + 1};
             else
                 return_vect_map[i][k_v.first] = {local_map[k_v.first].first, local_map[k_v.first].second + 1};//return_vect_map[local_map[k_v.first].second][k_v.first].second};
@@ -126,13 +142,36 @@ std::vector<std::map<char, std::pair<int,int>>> construct(std::string file)
         }
         local_map[line[i]].second = i;
     }
+    // Force last position
+    return_vect_int.push_back(vector<int>());
+    for (auto k_v:return_vect_map[0])
+        return_vect_int[return_vect_map.size()].push_back(return_vect_map.size()+1);
     if (DEBUG){
-        for (size_t i = 0; i  < return_vect_map.size(); ++i)
+        for (size_t i = 0; i  < return_vect_map.size() ; ++i)
         {
             std::cout << "Index: "<<i<<std::endl;
-            for (auto k_v: return_vect_map[i])
+            for (auto k_v: return_vect_map[i]){
                 std::cout << k_v.first<<" "<<k_v.second.first<<" "<<k_v.second.second<<std::endl;
+                return_vect_int[i].push_back(k_v.second.second);
+            }
         }
     }
-    return return_vect_map;
+    return return_vect_int;
+    //return return_vect_map;
+}
+
+void print_stack(vector<int> vect, int idx_len = 0)
+{
+    cout <<"Size check: "<< idx_len<<endl;
+    for (auto i:vect)
+        cout << i << " ";
+    cout << endl;
+}
+
+void print_lyndon(vector<string> lyndon_words)
+{
+    for (auto lw:lyndon_words)
+    {
+        cout << lw << endl;
+    }
 }
