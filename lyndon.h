@@ -134,7 +134,7 @@ vector<vector<int>> construct(string file)
         local_map[line[i]].first++;
         for (auto k_v: local_map){
             // std::cout <<"Key: "<<k_v.first<<"Indice: "<< i<<" "<< local_map[k_v.first].second<<" " << local_map[k_v.first].first<<" "<<local_map[k_v.first].second<< std::endl;
-            if ((line[i] == k_v.first) & (i > 0))
+            if ((line[i] == k_v.first))
                 return_vect_map[i][k_v.first] = {local_map[k_v.first].first, i + 1};
             else
                 return_vect_map[i][k_v.first] = {local_map[k_v.first].first, local_map[k_v.first].second + 1};//return_vect_map[local_map[k_v.first].second][k_v.first].second};
@@ -149,9 +149,9 @@ vector<vector<int>> construct(string file)
     if (DEBUG){
         for (size_t i = 0; i  < return_vect_map.size() ; ++i)
         {
-            std::cout << "Index: "<<i<<std::endl;
+            //std::cout << "Index: "<<i<<std::endl;
             for (auto k_v: return_vect_map[i]){
-                std::cout << k_v.first<<" "<<k_v.second.first<<" "<<k_v.second.second<<std::endl;
+                //std::cout << k_v.first<<" "<<k_v.second.first<<" "<<k_v.second.second<<std::endl;
                 return_vect_int[i].push_back(k_v.second.second);
             }
         }
@@ -174,4 +174,12 @@ void print_lyndon(vector<string> lyndon_words)
     {
         cout << lw << endl;
     }
+}
+
+string translate_container(vector<int> vect,int size, string seq)
+{
+    string lyndon_word = "";
+    for (int i = 1; i < size; ++i)
+        lyndon_word += seq[vect[i] - 1];
+    return lyndon_word;
 }

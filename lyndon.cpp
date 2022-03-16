@@ -63,6 +63,93 @@ int enumeration(const wt_huff<rrr_vector<63>> wt, pair<int,int> sig_l, vector<ve
     return lyndon_words.size();
 }
 
+// Lyndon enumeration
+vector<string> enumeration_dominik(const vector<vector<int>> & next_chars, std::set<char> & seq_chars, string seq)
+{
+    vector<string> lyndon_words;
+    map<char,int> char_map;
+    int place = 0;
+    for (char c: seq_chars){
+        char_map[c] = place++;
+        lyndon_words.push_back(string(1,c));
+    }
+    /*
+     * Constants
+     */
+    int sigma = seq_chars.size(), seq_size = seq.size();
+    /*
+     * Stacks
+     */
+    vector<int> cur_trav_stack(seq.size()+1,-1);
+    stack<int> IL_stack, backtrack_decision_stack;
+    // Place we are
+    int cur_trav_pos = 1;
+    cur_trav_stack[0] = 0;
+    cur_trav_stack[1] = next_chars[0][0];
+    // Place we compare
+    IL_stack.push(1);
+    // Decision we made
+    backtrack_decision_stack.push(0);
+    while (!(backtrack_decision_stack.empty()))
+    {
+        if (cur_trav_pos > seq_size){
+            cout << "That is the case"<<endl;
+            exit(1);
+        }
+        int cur_place = cur_trav_stack[cur_trav_pos],
+            IL_val = IL_stack.top();
+        int offset = char_map[seq[cur_trav_stack[IL_val]-1]], num_failures = 0;
+        //cout << "Cur traversal: "<<cur_trav_pos<<endl;
+        //print_stack(cur_trav_stack);
+        //cout << "IL_val:" <<IL_val<<" Offset: "<<offset<<" Num_failures: "<<num_failures<<" Cur place: "<<cur_place<<endl;
+        while (((offset + num_failures) < sigma) & (next_chars[cur_place][offset + num_failures] > seq_size)){
+            //cout << "Next chars: "<<next_chars[cur_place][offset + num_failures]<<endl;
+            num_failures++;
+        }
+        //cout << "IL_val:" <<IL_val<<" Offset: "<<offset<<" Num_failures: "<<num_failures<<" Cur place: "<<cur_place<<endl;
+        if ((offset + num_failures) < sigma)
+        {
+            cur_trav_pos++;
+            cur_trav_stack[cur_trav_pos] = next_chars[cur_place][offset + num_failures];
+            if (num_failures == 0)
+                IL_stack.push(IL_val + 1);
+            else {
+                lyndon_words.push_back(translate_container(cur_trav_stack,cur_trav_pos+1,seq));
+                IL_stack.push(1);
+            }
+            backtrack_decision_stack.push(offset + num_failures);
+        } else {
+            // Backtrack
+            /*cout << "Backtrack"<<endl;
+            cout << "Cur trav pos: "<<cur_trav_pos<<" "<<cur_trav_stack[cur_trav_pos]<<endl;*/
+            cur_trav_pos--;
+            int backtrack_decision = backtrack_decision_stack.top() + 1;
+            //cout << "Iterating: "<<IL_stack.size()<<" "<<backtrack_decision_stack.size()<<endl;
+            while ((backtrack_decision >= sigma) || (next_chars[cur_trav_stack[cur_trav_pos]][backtrack_decision] >= seq_size)){
+                backtrack_decision_stack.pop();
+                IL_stack.pop();
+                if (backtrack_decision_stack.empty())
+                    break;
+                backtrack_decision = backtrack_decision_stack.top() + 1;
+                cur_trav_pos--;
+            }
+            /*cout << "Backtrack: "<<backtrack_decision<<endl;
+            cout << "Cur trav pos: "<<cur_trav_pos<<" "<<cur_trav_stack[cur_trav_pos]<<endl;*/
+            if (!backtrack_decision_stack.empty()){
+                backtrack_decision_stack.pop();
+                backtrack_decision_stack.push(backtrack_decision);
+                IL_stack.pop();
+                IL_stack.push(1);
+                int cur_place = cur_trav_stack[cur_trav_pos];
+                cur_trav_pos++;
+                cur_trav_stack[cur_trav_pos] = next_chars[cur_place][backtrack_decision];
+                lyndon_words.push_back(translate_container(cur_trav_stack,cur_trav_pos+1,seq));
+            }
+        }  
+    }
+    return lyndon_words;
+}
+
 // Stack enumeration
 int stack_enumeration(const vector<map<char,pair<int,int>>> & next_chars, std::set<char> & seq_chars)
 {
@@ -294,7 +381,8 @@ int main(int argc, char *argv[])
                     vector<vector<int>> forward_count = construct(file);
                     auto start = std::chrono::system_clock::now();
                     //number = stack_enumeration(forward_count, seq_chars);
-                    vector<string> lyndon_words = dfs_enumeration(forward_count, seq_chars, seq);
+                    //vector<string> lyndon_words = dfs_enumeration(forward_count, seq_chars, seq);
+                    vector<string> lyndon_words = enumeration_dominik(forward_count, seq_chars, seq);
                     auto end = std::chrono::system_clock::now();
                     std::chrono::duration<float,std::milli> duration = end - start;
                     #pragma omp critical
