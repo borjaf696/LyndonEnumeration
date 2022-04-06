@@ -18,7 +18,7 @@
 #include <filesystem>
 
 #define N_THREADS 1
-#define DEBUG true
+#define DEBUG false
 
 using namespace std;
 
@@ -114,7 +114,7 @@ vector<vector<int>> construct(string file)
     {
         while ( getline (chain_file,line) )
         {
-            std::cout << line << std::endl;
+            //std::cout << line << std::endl;
         }
         chain_file.close();
     }
@@ -135,9 +135,9 @@ vector<vector<int>> construct(string file)
         for (auto k_v: local_map){
             // std::cout <<"Key: "<<k_v.first<<"Indice: "<< i<<" "<< local_map[k_v.first].second<<" " << local_map[k_v.first].first<<" "<<local_map[k_v.first].second<< std::endl;
             if ((line[i] == k_v.first))
-                return_vect_map[i][k_v.first] = {local_map[k_v.first].first, i + 1};
+                return_vect_map[i][k_v.first] = {local_map[k_v.first].first, i+1};
             else
-                return_vect_map[i][k_v.first] = {local_map[k_v.first].first, local_map[k_v.first].second + 1};//return_vect_map[local_map[k_v.first].second][k_v.first].second};
+                return_vect_map[i][k_v.first] = {local_map[k_v.first].first, local_map[k_v.first].second};//return_vect_map[local_map[k_v.first].second][k_v.first].second};
             //std::cout << k_v.first<<" "<<(return_vect_map[i][k_v.first]).first<<" "<<(return_vect_map[i][k_v.first]).second<<std::endl;
         }
         local_map[line[i]].second = i;
@@ -146,12 +146,15 @@ vector<vector<int>> construct(string file)
     return_vect_int.push_back(vector<int>());
     for (auto k_v:return_vect_map[0])
         return_vect_int[return_vect_map.size()].push_back(return_vect_map.size()+1);
+    for (size_t i = 0; i  < return_vect_map.size() ; ++i)
+            for (auto k_v: return_vect_map[i])
+                return_vect_int[i].push_back(k_v.second.second);
     if (DEBUG){
         for (size_t i = 0; i  < return_vect_map.size() ; ++i)
         {
-            //std::cout << "Index: "<<i<<std::endl;
+            std::cout << "Index: "<<i<<std::endl;
             for (auto k_v: return_vect_map[i]){
-                //std::cout << k_v.first<<" "<<k_v.second.first<<" "<<k_v.second.second<<std::endl;
+                std::cout << k_v.first<<" "<<k_v.second.first<<" "<<k_v.second.second<<std::endl;
                 return_vect_int[i].push_back(k_v.second.second);
             }
         }
