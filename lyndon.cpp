@@ -150,35 +150,30 @@ vector<string> enumeration_dominik(const vector<vector<int>> & next_chars, std::
     return lyndon_words;
 }
 
-vector<string> enumeration_short(const vector<vector<int>> & next_chars, std::set<char> & seq_chars, string seq, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates)
+size_t enumeration_short(const vector<vector<int>> & next_chars, std::set<char> & seq_chars, string seq, pair<int,int> sig_l, vector<vector<pair<int, float>>> & rates)
 {
     size_t visited_tree_nodes = 0;
-    vector<string> lyndon_words;
+    unordered_set<string> lyndon_words;
+    size_t number = 0;
     map<char,int> char_map;
-    int place = 0;
+    int place = 0, starting_point = 0;
     for (char c: seq_chars){
         char_map[c] = place++;
     }
     int stack_position = 0, seq_size = seq.size(), sigma_size = char_map.size();
     vector<pair<int,int>> stackT = vector<pair<int,int>>(seq_size + 1);
     vector<int> last_check = vector<int>(seq_size + 1, 0);
-    int feasible_position = 0;
+    int feasible_position = next_chars[0][starting_point];
     stackT[stack_position] = {feasible_position,0};
     last_check[stack_position] = 0;
     int last_char_check = char_map[seq[stackT[stackT[stack_position].second].first] 
         + last_check[stackT[stack_position].second]];
     feasible_position = next_chars[feasible_position][last_char_check];
-    //cout << "Feasible pos: "<<feasible_position<<" last char check: "<<last_char_check<<endl;
-    while ((stack_position > 0) || (feasible_position < seq_size))
+    while ((stack_position >= 0) || (feasible_position < seq_size))
     {
         visited_tree_nodes++;
         if (DEBUG){
-            if (feasible_position >= seq_size)
-            {
-                for (int i = 0; i < stack_position+1; ++i)
-                    cout << seq[stackT[i].first];
-                cout << endl;
-            }
+            print_stack(stackT, last_check, stack_position);
         }
         if (feasible_position < seq_size){
             pair<int,int> text_prev = stackT[stack_position];
@@ -186,12 +181,17 @@ vector<string> enumeration_short(const vector<vector<int>> & next_chars, std::se
             if (seq[feasible_position] > seq[stackT[text_prev.second].first])
             {
                 new_check = 0;
-                //cout << "Lyndon!"<<endl;
-                string word = "";
+                /*string word = "";
                 for (int i = 0; i < stack_position+1; ++i)
                     word += seq[stackT[i].first];
                 word += seq[feasible_position];
-                lyndon_words.push_back(word);
+                if (lyndon_words.find(word) == lyndon_words.end())
+                    lyndon_words.emplace(word);
+                else{
+                    cout << word<<endl;
+                    print_set(lyndon_words);
+                }*/
+                number++;
             }
             ++stack_position;
             stackT[stack_position] = {feasible_position, new_check};
@@ -201,34 +201,33 @@ vector<string> enumeration_short(const vector<vector<int>> & next_chars, std::se
             //cout <<"Stack position: "<<stack_position<<" Middle: "<< last_char_check<<endl;
         } else {
             if (last_check[stack_position] < (sigma_size - 1)) {
-                //cout << "BACKTRACK: Stack: "<<stack_position<<" last char: "<<last_check[stack_position]<<endl;
                 last_char_check = ++last_check[stack_position];
             } else{
                 stack_position--;
-                //cout << "BACKTRACK: Last char check: "<<last_check[stack_position]<<" Stack position: "<<stack_position<<endl;
-                last_char_check = ++last_check[stack_position];
+                if (stack_position >= 0)
+                    last_char_check = ++last_check[stack_position];
             }
         }
         if (stack_position >= 0){
-            if (last_char_check >= sigma_size)
+            if (last_char_check >= sigma_size) {
                 feasible_position = seq_size;
-            else{
+            } else{
                 //cout << "Prev: "<<feasible_position<<" "<<last_char_check<<" Next check: "<<stackT[stack_position].first<<endl;
                 feasible_position = next_chars[stackT[stack_position].first][last_char_check];
-                /*cout << "Stack: "<<stackT[stack_position].first<<" Feasible: "<<feasible_position
-                    <<" last char "<<last_char_check<<" Char rolled: "<<stackT[stack_position].second<<endl;*/
-                if (stack_position == 0)
-                {
-                    feasible_position = next_chars[0][last_char_check];
-                    stackT[stack_position] = {feasible_position,0};
-                    feasible_position = next_chars[feasible_position][last_char_check];   
-                }
             }
-        } else 
-            break;
+        } else {
+            if (starting_point == (sigma_size-1)){
+                break;
+            }
+            feasible_position = next_chars[0][++starting_point];
+            stack_position++;
+            stackT[stack_position] = {feasible_position,0};
+            last_check[stack_position] = starting_point;
+            feasible_position = next_chars[feasible_position][0]; 
+        }
     }
-    rates[sig_l.first].push_back({sig_l.second, visited_tree_nodes/(lyndon_words.size()*1.)});
-    return lyndon_words;
+    rates[sig_l.first].push_back({sig_l.second, visited_tree_nodes/(number*1.)});
+    return number;
 }
 
 // Stack enumeration
@@ -420,6 +419,7 @@ int main(int argc, char *argv[])
     // Wavelette tree
     vector<vector<pair<int,float>>> rates(files.size(), vector<pair<int,float>>());
     vector<vector<pair<int,float>>> times(files.size(), vector<pair<int,float>>());
+    vector<vector<pair<int,float>>> lws(files.size(), vector<pair<int,float>>());
     set<int> idx;
     omp_set_num_threads(N_THREADS);
     cout << "Number of threads working: "<<N_THREADS<<endl;
@@ -463,19 +463,20 @@ int main(int argc, char *argv[])
                     //number = stack_enumeration(forward_count, seq_chars);
                     //vector<string> lyndon_words = dfs_enumeration(forward_count, seq_chars, seq);
                     //vector<string> lyndon_words = enumeration_dominik(forward_count, seq_chars, seq);
-                    vector<string> lyndon_words = enumeration_short(forward_count, seq_chars, seq, sig_l, rates);
+                    size_t lyndon_words = enumeration_short(forward_count, seq_chars, seq, sig_l, rates);
                     auto end = std::chrono::system_clock::now();
                     std::chrono::duration<float,std::milli> duration = end - start;
                     #pragma omp critical
                     {
-                        times[sig_l.first].push_back({sig_l.second, (duration.count()/lyndon_words.size())});
+                        times[sig_l.first].push_back({sig_l.second, (duration.count()/lyndon_words)});
+                        lws[sig_l.first].push_back({sig_l.second, lyndon_words});
                     }
-                    if (DEBUG)
-                        print_lyndon(lyndon_words);
-                    number = lyndon_words.size();
+                    /*if (DEBUG)
+                        print_lyndon(lyndon_words);*/
+                    number = lyndon_words;
                 }
                 //cout << "Number of lyndon words: "<<number<<endl;
-                cout << "File: "<<(i*1./files.size()*100.)<<"%"<<endl;
+                cout << "File: "<<(i*1./files.size()*100.)<<"% "<<file<<" Number of LW: "<<number<<endl;
             }
     }
     cout << endl;
@@ -490,6 +491,10 @@ int main(int argc, char *argv[])
         for (auto p: times[i])
         {
             cout << "Length string: "<<p.first<<" Time: "<<p.second<<endl;
+        }
+        for (auto p: lws[i])
+        {
+            cout << "Length string: "<<p.first<<" LyndonWords: "<<p.second<<endl;
         }
     }
 }

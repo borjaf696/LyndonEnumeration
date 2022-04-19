@@ -122,6 +122,7 @@ vector<vector<int>> construct(string file)
     std::vector<std::vector<int>> return_vect_int;
     std::vector<std::map<char,std::pair<int,int>>> return_vect_map;
     std::map<char,std::pair<int,int>> local_map;
+    int seq_length = line.size();
     for (int i = line.size() - 1; i >= 0; --i){
         if (local_map.find(line[i]) == local_map.end())
             local_map[line[i]] = {0,line.size()};
@@ -134,9 +135,9 @@ vector<vector<int>> construct(string file)
         local_map[line[i]].first++;
         for (auto k_v: local_map){
             // std::cout <<"Key: "<<k_v.first<<"Indice: "<< i<<" "<< local_map[k_v.first].second<<" " << local_map[k_v.first].first<<" "<<local_map[k_v.first].second<< std::endl;
-            if ((line[i] == k_v.first))
+            /*if ((line[i] == k_v.first))
                 return_vect_map[i][k_v.first] = {local_map[k_v.first].first, i+1};
-            else
+            else*/
                 return_vect_map[i][k_v.first] = {local_map[k_v.first].first, local_map[k_v.first].second};//return_vect_map[local_map[k_v.first].second][k_v.first].second};
             //std::cout << k_v.first<<" "<<(return_vect_map[i][k_v.first]).first<<" "<<(return_vect_map[i][k_v.first]).second<<std::endl;
         }
@@ -152,7 +153,7 @@ vector<vector<int>> construct(string file)
     if (DEBUG){
         for (size_t i = 0; i  < return_vect_map.size() ; ++i)
         {
-            std::cout << "Index: "<<i<<std::endl;
+            std::cout << "Index: "<<i<<" "<< seq_length<<std::endl;
             for (auto k_v: return_vect_map[i]){
                 std::cout << k_v.first<<" "<<k_v.second.first<<" "<<k_v.second.second<<std::endl;
                 return_vect_int[i].push_back(k_v.second.second);
@@ -176,6 +177,22 @@ void print_lyndon(vector<string> lyndon_words)
     for (auto lw:lyndon_words)
     {
         cout << lw << endl;
+    }
+}
+
+void print_set(unordered_set<string> lyndon_words)
+{
+    for (auto lw: lyndon_words)
+        cout << lw <<endl;
+}
+
+void print_stack(vector<pair<int,int>> traversal_stack, vector<int> decisions, size_t cur_pos)
+{
+    cout << "Printing stack"<<endl;
+    for (size_t i = 0; i < cur_pos+1; ++i)
+    {
+        cout << traversal_stack[i].first<<" "<<traversal_stack[i].second<<" ";
+        cout << decisions[i]<<endl;
     }
 }
 
